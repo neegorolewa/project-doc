@@ -1,0 +1,58 @@
+@startuml HotelBookingSystem Компоненты
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title "Система Бронирования Отелей. Сервис бронирования. Диаграмма компонентов"
+
+Container(bookingService, "Сервис бронирования", "ASP.NET Core", "Создание, изменение, отмена бронирований") {
+    
+    Component(bookingController, "Api контроллер", "C#", "Основной api контроллер для операций с бронированиями")
+
+    Component(authClient, "Клиент сервиса аутентификации", "C#", "Клиент для проверки прав пользователей")
+        bookingController --> authClient : CheckUserPermissions(userId, role)
+    
+    Component(bookingManager, "Менеджер бронирований", "C#", "Управляет жизненным циклом бронирования")
+        bookingController --> bookingManager : CreateBooking(bookingData)
+        bookingController --> bookingManager : UpdateBooking(bookingId, updates)
+        bookingController --> bookingManager : CancelBooking(bookingId)
+
+    Component(availabilityChecker, "Проверка доступности", "C#", "Проверяет доступность номеров на выбранные даты")
+        bookingManager --> availabilityChecker : CheckAvailability(hotelId, roomType, checkIn, checkOut)
+
+    Component(priceCalculator, "Калькулятор стоимости", "C#", "Рассчитывает итоговую стоимость бронирования")
+        bookingManager --> priceCalculator : CalculatePrice(roomPrice, nights, guests, extras)
+
+    Component(confirmationGenerator, "Генератор подтверждений", "C#", "Генерирует номера подтверждений и ваучеры")
+        bookingManager --> confirmationGenerator : GenerateConfirmation(bookingData)
+
+    Component(paymentClient, "Клиент платежного сервиса", "C#", "Инициирует оплату бронирования")
+        bookingManager --> paymentClient : InitiatePayment(bookingId, amount, currency)
+
+    Component(notificationClient, "Клиент сервиса уведомлений", "C#", "Отправляет уведомления о бронировании")
+        bookingManager --> notificationClient : SendBookingNotification(userEmail, bookingDetails)
+
+    Component(bookingRepository, "Репозиторий бронирований", "C#", "Работа с базой данных бронирований")
+        bookingManager --> bookingRepository : Save(booking)
+        bookingManager --> bookingRepository : GetById(bookingId)
+        bookingManager --> bookingRepository : Update(booking)
+
+    Component(searchClient, "Клиент сервиса поиска", "C#", "Получает детальную информацию об отелях и номерах")
+        availabilityChecker --> searchClient : GetRoomDetails(hotelId, roomType)
+}
+
+Container_Ext(authService, "Сервис аутентификации", "ASP.NET Core", "Управление пользователями и правами")
+    authClient --> authService : GET /users/{userId}/permissions?role=guest
+
+Container_Ext(searchService, "Сервис поиска", "ASP.NET Core", "Поиск и информация об отелях и номерах")
+    searchClient --> searchService : GET /hotels/{hotelId}/rooms/{roomType}
+
+Container(paymentService, "Сервис оплаты", "ASP.NET Core", "Обработка онлайн-платежей")
+    paymentClient --> paymentService : POST /payments Body: {bookingId, amount, currency, method}
+
+Container(notificationService, "Сервис уведомлений", "ASP.NET Core", "Отправка email/SMS уведомлений")
+    notificationClient --> notificationService : POST /notifications Body: {type: "booking", email, template, data}
+
+ContainerDb(bookingDb, "База данных бронирований", "PostgreSQL", "Хранение бронирований")
+    bookingRepository --> bookingDb : SQL запросы через Entity Framework
+
+@enduml

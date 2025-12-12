@@ -1,0 +1,88 @@
+@startuml HotelBookingSystem Контейнер
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title "Система Бронирования Отелей. Диаграмма контейнеров"
+
+Person(guest, "Гость", "Клиент, ищущий и бронирующий отели")
+Person(hotelManager, "Менеджер отеля", "Управляет отелем, тарифами и бронированиями")
+Person(admin, "Администратор системы", "Управляет платформой, модерирует контент")
+
+System_Boundary(systemApp, "Система бронирования отелей") {
+
+    Container(webPortal, "Веб-портал", "React + TypeScript", "Поиск отелей, бронирование номеров, управление профилем")
+        guest --> webPortal : "Использует для бронирования"
+    
+    Container(hotelAdminPanel, "Панель управления отелем", "React + TypeScript", "Управление номерами, тарифами, бронированиями")
+        hotelManager --> hotelAdminPanel : "Управляет отелем"
+    
+    Container(adminPanel, "Панель администратора", "React + TypeScript", "Модерация контента, управление отелями, аналитика")
+        admin --> adminPanel : "Администрирует систему"
+
+    Container(apiGateway, "API Gateway", "Nginx/Kong", "Маршрутизация, балансировка нагрузки, аутентификация")
+        webPortal --> apiGateway : "API запросы REST API : HTTPS"
+        hotelAdminPanel --> apiGateway : "API запросы REST API : HTTPS"
+        adminPanel --> apiGateway : "API запросы REST API : HTTPS"
+
+    Container(authService, "Сервис аутентификации", "ASP.NET Core", "Регистрация, вход, управление ролями и правами")
+        apiGateway --> authService : "Аутентификация и авторизация REST API : HTTPS"
+
+    Container(searchService, "Сервис поиска", "ASP.NET Core", "Поиск отелей по фильтрам, рейтингам, доступности")
+        apiGateway --> searchService : "Поиск отелей и номеров REST API : HTTPS"
+
+    Container(bookingService, "Сервис бронирования", "ASP.NET Core", "Создание, изменение, отмена бронирований")
+        apiGateway --> bookingService : "Управление бронированиями REST API : HTTPS"
+        bookingService --> authService : "Проверка прав доступа REST API : HTTPS"
+
+    Container(hotelService, "Сервис управления отелями", "ASP.NET Core", "Управление информацией об отелях и номерах")
+        apiGateway --> hotelService : "CRUD операции по отелям REST API : HTTPS"
+        hotelService --> authService : "Проверка прав отеля REST API : HTTPS"
+
+    Container(reviewService, "Сервис отзывов", "ASP.NET Core", "Оставление, модерация и ответы на отзывы")
+        apiGateway --> reviewService : "Управление отзывами REST API : HTTPS"
+
+    Container(paymentService, "Сервис оплаты", "ASP.NET Core", "Обработка онлайн-платежей, возвратов")
+        bookingService --> paymentService : "Инициирование платежей REST API : HTTPS"
+
+    Container(notificationService, "Сервис уведомлений", "ASP.NET Core", "Отправка email/SMS уведомлений")
+        bookingService --> notificationService : "Отправка подтверждений REST API : HTTPS"
+
+    ContainerDb(userDb, "База данных пользователей", "MSSQL", "Хранение данных пользователей, отелей, профилей")
+        authService --> userDb : "Чтение/запись пользователей ORM(EF)"
+        hotelService --> userDb : "Чтение/запись данных отелей ORM(EF)"
+
+    ContainerDb(bookingDb, "База данных бронирований", "MSSQL", "Хранение бронирований, тарифов, доступности")
+        bookingService --> bookingDb : "Чтение/запись бронирований ORM(EF)"
+        searchService --> bookingDb : "Поиск доступности ORM(EF)"
+
+    ContainerDb(reviewDb, "База данных отзывов", "MSSQL", "Хранение отзывов, рейтингов, ответов")
+        reviewService --> reviewDb : "Чтение/запись отзывов ORM(EF)"
+
+    ContainerDb(paymentDb, "База данных платежей", "MSSQL", "Хранение транзакций, счетов, платежей")
+        paymentService --> paymentDb : "Чтение/запись платежей ORM(EF)"
+
+    Container(analyticsService, "Сервис аналитики", "ASP.NET Core", "Аналитика заполняемости, отчеты, статистика")
+        apiGateway --> analyticsService : "Получение отчетов REST API : HTTPS"
+        analyticsService --> bookingDb : "Анализ данных REST API : HTTPS"
+        analyticsService --> userDb : "Анализ пользователей REST API : HTTPS"
+}
+
+Container_Ext(paymentGateway, "Платежный шлюз", "Stripe/PayPal API", "Обработка онлайн-платежей")
+    paymentService --> paymentGateway : "Обработка транзакций REST API : HTTPS"
+
+Container_Ext(mapsApi, "Картографический API", "Google Maps/Яндекс.Карты", "Отображение локаций, геокодирование")
+    searchService --> mapsApi : "Получение координат и карт REST API : HTTPS"
+
+Container_Ext(emailService, "Email сервис", "SendGrid/Mailgun", "Отправка email сообщений")
+    notificationService --> emailService : "Отправка email REST API : HTTPS"
+
+Container_Ext(smsService, "SMS сервис", "Twilio/СМС-центр", "Отправка SMS сообщений")
+    notificationService --> smsService : "Отправка SMS REST API : HTTPS"
+
+Container_Ext(hotelPms, "PMS системы отелей", "External Hotel API", "Синхронизация данных о доступности")
+    hotelService --> hotelPms : "Синхронизация номеров REST API : HTTPS"
+
+Container_Ext(partnerApi, "API партнеров", "Tourism/Booking APIs", "Интеграция с партнерами и агентствами")
+    bookingService --> partnerApi : "Обмен бронированиями REST API : HTTPS"
+
+@enduml

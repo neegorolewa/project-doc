@@ -1,0 +1,30 @@
+    @startuml HotelBookingSystem Контекст
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title "Система Бронирования Отелей. Диаграмма контекста"
+
+Person(guest, "Гость", "Пользователь, ищущий и бронирующий отели для проживания")
+Person(hotelManager, "Менеджер отеля", "Представитель отеля, управляющий информацией и бронированиями")
+Person(admin, "Администратор системы", "Пользователь с правами управления всей платформой")
+Person(partner, "Партнер/Агентство", "Внешний партнер с интеграцией в систему")
+
+System(hotelBookingSystem, "Система Бронирования Отелей", "Основная платформа")
+    guest ---> hotelBookingSystem : "Использует для поиска и бронирования"
+    hotelManager ---> hotelBookingSystem : "Использует для управления отелем"
+    admin ---> hotelBookingSystem : "Использует для администрирования"
+    partner ---> hotelBookingSystem : "Использует для интеграции"
+
+System_Ext(paymentSystem, "Платежная система", "API для обработки онлайн-платежей")
+    hotelBookingSystem --> paymentSystem : "Обработка оплаты бронирований"
+
+System_Ext(mapService, "Картографический сервис", "API для отображения локаций")
+    hotelBookingSystem --> mapService : "Отображение отелей на карте"
+
+System_Ext(notificationService, "Сервис уведомлений", "API для отправки email/SMS")
+    hotelBookingSystem --> notificationService : "Отправка подтверждений и уведомлений"
+
+System_Ext(crmPmsSystem, "CRM/PMS системы", "API интеграции с системами управления отелей")
+    hotelBookingSystem --> crmPmsSystem : "Синхронизация данных о доступности"
+
+@enduml
