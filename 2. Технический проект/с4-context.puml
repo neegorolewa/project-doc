@@ -1,30 +1,39 @@
-    @startuml HotelBookingSystem Контекст
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
 
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+title Контекстная диаграмма C4: Система Бронирования Отелей
 
-title "Система Бронирования Отелей. Диаграмма контекста"
+Person(guest, "Гость", "Ищет и бронирует отели, управляет бронированиями, оставляет отзывы")
+Person(hotelier, "Отельер", "Управляет информацией об отеле, номерами, тарифами и бронированиями")
+Person(admin, "Администратор", "Модерирует контент, управляет отелями, анализирует статистику")
+Person(partner, "Партнер/Агентство", "Интегрирует спецпредложения и акции")
+Person(reception, "Менеджер ресепшена", "Подтверждает заезды/выезды, отмечает факт проживания")
+Person(anon_user, "Анонимный пользователь", "Ищет отели без регистрации")
 
-Person(guest, "Гость", "Пользователь, ищущий и бронирующий отели для проживания")
-Person(hotelManager, "Менеджер отеля", "Представитель отеля, управляющий информацией и бронированиями")
-Person(admin, "Администратор системы", "Пользователь с правами управления всей платформой")
-Person(partner, "Партнер/Агентство", "Внешний партнер с интеграцией в систему")
+System(hotel_booking_system, "Система Бронирования Отелей", "Централизованная система поиска, бронирования и управления проживанием в отелях")
 
-System(hotelBookingSystem, "Система Бронирования Отелей", "Основная платформа")
-    guest ---> hotelBookingSystem : "Использует для поиска и бронирования"
-    hotelManager ---> hotelBookingSystem : "Использует для управления отелем"
-    admin ---> hotelBookingSystem : "Использует для администрирования"
-    partner ---> hotelBookingSystem : "Использует для интеграции"
+System_Ext(payment_gateway, "Платежный шлюз", "Внешняя система обработки онлайн-платежей")
+System_Ext(yandex_maps, "Яндекс.Карты", "Картографический сервис для отображения локаций")
+System_Ext(gosuslugi, "Госуслуги", "Система идентификации пользователей (возможная интеграция)")
+System_Ext(mvd, "МВД РФ", "Передача данных о проживающих для миграционного учета")
+System_Ext(email_sms, "Email провайдер / SMS шлюз", "Внешние системы, обеспечивающие отправку Email, SMS")
+System_Ext(hotel_pms, "PMS системы отелей", "Синхронизация данных о доступности номеров")
 
-System_Ext(paymentSystem, "Платежная система", "API для обработки онлайн-платежей")
-    hotelBookingSystem --> paymentSystem : "Обработка оплаты бронирований"
+Rel(guest, hotel_booking_system, "Ищет отели, бронирует номера, управляет бронированиями")
+Rel(hotelier, hotel_booking_system, "Управляет отелем, тарифами, бронированиями и отзывами")
+Rel(admin, hotel_booking_system, "Модерирует, управляет системой, анализирует")
+Rel(partner, hotel_booking_system, "Настраивает спецпредложения и акции")
+Rel(reception, hotel_booking_system, "Подтверждает заезды, отмечает выезды")
+Rel(anon_user, hotel_booking_system, "Просматривает отели без бронирования")
 
-System_Ext(mapService, "Картографический сервис", "API для отображения локаций")
-    hotelBookingSystem --> mapService : "Отображение отелей на карте"
+Rel(hotel_booking_system, payment_gateway, "Выполняет онлайн-оплаты бронирований")
+Rel(hotel_booking_system, yandex_maps, "Отображает локации отелей на картах")
+Rel(hotel_booking_system, gosuslugi, "Верификация пользователей (опционально)")
+Rel(hotel_booking_system, mvd, "Передает данные гостей для миграционного учета")
+Rel(hotel_booking_system, email_sms, "Позволяют отправлять уведомления пользователям")
+Rel(hotel_booking_system, hotel_pms, "Позволяет интегрироваться с системой управления других отелей")
 
-System_Ext(notificationService, "Сервис уведомлений", "API для отправки email/SMS")
-    hotelBookingSystem --> notificationService : "Отправка подтверждений и уведомлений"
-
-System_Ext(crmPmsSystem, "CRM/PMS системы", "API интеграции с системами управления отелей")
-    hotelBookingSystem --> crmPmsSystem : "Синхронизация данных о доступности"
+Rel_L(guest, hotelier, "Оставляет отзывы об отеле")
+Rel_R(hotelier, guest, "Отвечает на отзывы гостей")
 
 @enduml
