@@ -1,0 +1,48 @@
+@startuml
+title Последовательность процесса бронирования отеля
+
+actor "Гость" as Guest
+participant "Веб-портал" as Web
+participant "API Gateway" as AG
+participant "Сервис бронирования" as Booking
+participant "Сервис аутентификации" as Auth
+participant "Сервис поиска" as Search
+participant "Сервис оплаты" as Payment
+participant "Сервис уведомлений" as Notification
+participant "PMS система отеля" as PMS
+
+Guest -> Web: Поиск отелей (даты, фильтры)
+Web -> AG: GET /search?checkIn=...&checkOut=...
+AG -> Search: Запрос поиска
+Search --> AG: Результаты поиска
+AG --> Web: JSON с отелями
+Web --> Guest: Отображение результатов
+
+Guest -> Web: Выбор отеля и номера
+Web -> AG: GET /hotels/{id}/availability
+AG -> Booking: Проверка доступности
+Booking --> AG: Подтверждение доступности
+AG --> Web: Данные о доступности и цене
+Web --> Guest: Форма бронирования
+
+Guest -> Web: Заполнение данных и подтверждение
+Web -> AG: POST /bookings {bookingData}
+AG -> Auth: Проверка прав пользователя
+Auth --> AG: Успешная аутентификация
+AG -> Booking: Создание бронирования
+
+alt Бронирование успешно
+  Booking -> Payment: Инициирование оплаты
+  Payment --> Booking: Подтверждение оплаты
+  Booking -> PMS: Синхронизация бронирования
+  PMS --> Booking: Подтверждение от отеля
+  Booking -> Notification: Отправка подтверждения
+  Notification --> Booking: Уведомление отправлено
+  Booking --> AG: {success, bookingId, confirmation}
+else Ошибка бронирования
+  Booking --> AG: {error, message}
+end
+
+AG --> Web
+Web --> Guest: Результат бронирования
+@enduml
