@@ -1,0 +1,222 @@
+@startuml
+title Диаграмма развертывания системы бронирования отелей
+
+skinparam componentStyle rectangle
+skinparam backgroundColor #FFFFFF
+
+' === 1. ПОЛЬЗОВАТЕЛИ И КЛИЕНТЫ ===
+actor "Гость" as guest
+actor "Отельер" as hotelier
+actor "Администратор" as admin
+actor "Партнер" as partner
+actor "Сотрудник ресепшена" as reception
+
+rectangle "Клиентские приложения" {
+  [Веб-портал\nReact + TypeScript] as webPortal
+  [Панель управления отелем\nReact + TypeScript] as hotelPanel
+  [Панель администратора\nReact + TypeScript] as adminPanel
+  [Партнерский портал\nReact + TypeScript] as partnerPortal
+}
+
+' === 2. API ШЛЮЗ ===
+rectangle "API Gateway" {
+  [Kong/Nginx\nБалансировка, аутентификация] as apiGateway
+}
+
+' === 3. ОСНОВНЫЕ МИКРОСЕРВИСЫ (ASP.NET Core) ===
+rectangle "Микросервисы (Kubernetes + AKS)" {
+  
+  [Сервис аутентификации\nOAuth2/JWT, .NET 8] as authService
+  
+  [Сервис поиска\nElasticsearch, .NET 8] as searchService
+  
+  [Сервис бронирования\nОсновная логика, .NET 8] as bookingService
+  
+  [Сервис управления отелями\nCRM отелей, .NET 8] as hotelService
+  
+  [Сервис отзывов и рейтингов\nМодерация, .NET 8] as reviewService
+  
+  [Сервис оплаты\nPCI DSS, .NET 8] as paymentService
+  
+  [Сервис уведомлений\nEmail/SMS, .NET 8] as notificationService
+  
+  [Сервис партнеров\nАкции и промо, .NET 8] as partnerService
+  
+  [Сервис миграционного учета\nИнтеграция с МВД, .NET 8] as migrationService
+  
+  [Сервис аналитики\nОтчеты, KPI, .NET 8] as analyticsService
+}
+
+' === 4. ХРАНИЛИЩА ДАННЫХ ===
+rectangle "Базы данных (Azure SQL)" {
+  database "Пользователи и отели\nSQL Server + EF Core" as userDb
+  
+  database "Бронирования\nSQL Server + EF Core" as bookingDb
+  
+  database "Отзывы и рейтинги\nSQL Server + EF Core" as reviewDb
+  
+  database "Платежи и транзакции\nSQL Server + EF Core" as paymentDb
+  
+  database "Партнерские данные\nSQL Server + EF Core" as partnerDb
+}
+
+rectangle "Кэш и очереди" {
+  database "Redis Cluster\nКэширование сессий и данных" as redis
+  
+  queue "Azure Service Bus\nАсинхронные события" as serviceBus
+}
+
+' === 5. ВНЕШНИЕ СИСТЕМЫ ===
+cloud "Внешние интеграции" {
+  [Платежный шлюз\nМонета.РУ API] as paymentGateway
+  [Картографический сервис\nЯндекс.Карты API] as mapsApi
+  [Email сервис\nSendGrid/Mailgun] as emailService
+  [SMS сервис\nTwilio] as smsService
+  [Системы отелей (PMS)\nAPI отелей] as hotelPms
+  [Госуслуги (ЕСИА)\nВерификация] as gosuslugi
+  [МВД РФ API\nМиграционный учет] as mvdApi
+}
+
+' === 6. МОНИТОРИНГ И ЛОГИРОВАНИЕ ===
+rectangle "Мониторинг и аналитика" {
+  [Azure Monitor\nЛоги и метрики] as azureMonitor
+  [Application Insights\nТрассировка запросов] as appInsights
+  [Grafana Dashboard\nВизуализация] as grafana
+  [ELK Stack\nАнализ логов] as elkStack
+}
+
+' === 7. CI/CD И ИНФРАСТРУКТУРА ===
+rectangle "DevOps инфраструктура" {
+  [Azure DevOps\nCI/CD Pipelines] as azureDevOps
+  [Azure Container Registry\nDocker образы] as acr
+  [Azure Key Vault\nСекреты и сертификаты] as keyVault
+  [Azure Backup\nРезервное копирование] as azureBackup
+}
+
+' === КЛЮЧЕВЫЕ СВЯЗИ ===
+
+' 7.1. Пользователи -> Клиенты
+guest --> webPortal : "Бронирование"
+hotelier --> hotelPanel : "Управление отелем"
+admin --> adminPanel : "Администрирование"
+partner --> partnerPortal : "Партнерские акции"
+reception --> hotelPanel : "Ресепшн"
+
+' 7.2. Клиенты -> API Gateway
+webPortal --> apiGateway : "HTTPS / REST API"
+hotelPanel --> apiGateway : "HTTPS / REST API"
+adminPanel --> apiGateway : "HTTPS / REST API"
+partnerPortal --> apiGateway : "HTTPS / REST API"
+
+' 7.3. API Gateway -> Сервисы
+apiGateway --> authService : "Аутентификация"
+apiGateway --> searchService : "Поиск отелей"
+apiGateway --> bookingService : "Управление бронированиями"
+apiGateway --> hotelService : "CRUD отелей"
+apiGateway --> reviewService : "Отзывы и рейтинги"
+apiGateway --> partnerService : "Партнерские программы"
+apiGateway --> analyticsService : "Отчеты и статистика"
+
+' 7.4. Сервисы -> Базы данных
+authService --> userDb : "ORM (EF Core)"
+hotelService --> userDb : "ORM (EF Core)"
+partnerService --> userDb : "ORM (EF Core)"
+
+bookingService --> bookingDb : "ORM (EF Core)"
+searchService --> bookingDb : "Чтение доступности"
+migrationService --> bookingDb : "Чтение данных гостей"
+
+reviewService --> reviewDb : "ORM (EF Core)"
+paymentService --> paymentDb : "ORM (EF Core)"
+partnerService --> partnerDb : "ORM (EF Core)"
+
+analyticsService --> userDb : "Анализ пользователей"
+analyticsService --> bookingDb : "Анализ бронирований"
+analyticsService --> paymentDb : "Анализ платежей"
+
+' 7.5. Кэш и очереди
+authService --> redis : "Кэш сессий"
+bookingService --> redis : "Кэш доступности"
+searchService --> redis : "Кэш результатов поиска"
+
+bookingService --> serviceBus : "События бронирования"
+notificationService --> serviceBus : "Подписка на события"
+analyticsService --> serviceBus : "Подписка на события"
+
+' 7.6. Межсервисное взаимодействие
+bookingService --> authService : "Проверка прав доступа"
+bookingService --> paymentService : "Инициирование платежей"
+bookingService --> notificationService : "Отправка уведомлений"
+bookingService --> migrationService : "Передача данных гостей"
+
+hotelService --> authService : "Проверка прав отеля"
+
+' 7.7. Внешние интеграции
+paymentService --> paymentGateway : "Обработка платежей"
+searchService --> mapsApi : "Геолокация и карты"
+notificationService --> emailService : "Отправка email"
+notificationService --> smsService : "Отправка SMS"
+authService --> gosuslugi : "Верификация пользователей"
+migrationService --> mvdApi : "Миграционный учет"
+hotelService --> hotelPms : "Синхронизация номеров"
+
+' 7.8. Мониторинг
+authService --> azureMonitor : "Метрики"
+bookingService --> appInsights : "Трассировка"
+paymentService --> appInsights : "Трассировка платежей"
+azureMonitor --> grafana : "Визуализация"
+appInsights --> elkStack : "Логи"
+
+' 7.9. DevOps инфраструктура
+azureDevOps --> acr : "Публикация образов"
+acr --> authService : "Развертывание"
+acr --> bookingService : "Развертывание"
+authService --> keyVault : "Получение секретов"
+bookingService --> keyVault : "Получение секретов"
+userDb --> azureBackup : "Ежедневный бэкап"
+bookingDb --> azureBackup : "Ежедневный бэкап"
+
+' === ЛЕГЕНДА И ПРИМЕЧАНИЯ ===
+legend right
+  | Цвет | Назначение |
+  | <#FFFFFF> | Бизнес-сервис (ASP.NET Core) |
+  | <#D4F4D4> | База данных (Azure SQL) |
+  | <#E0E0FF> | Кэш и очереди |
+  | <#E6F3F7> | Инфраструктура и DevOps |
+  | <#FFF0F5> | Внешняя система |
+  | <#FFFFE0> | Мониторинг и аналитика |
+endlegend
+
+note right of serviceBus
+  <b>Асинхронная коммуникация:</b>
+  • События бронирований
+  • События платежей
+  • События уведомлений
+  • События для аналитики
+end note
+
+note left of redis
+  <b>Кэширование:</b>
+  • Сессии пользователей
+  • Доступность номеров
+  • Результаты поиска
+  • Статические данные
+end note
+
+note bottom of azureDevOps
+  <b>CI/CD Pipeline:</b>
+  1. Build: Docker образы
+  2. Test: xUnit + Jest + Playwright
+  3. Deploy: Rolling deployment в AKS
+  4. Verify: Health checks
+end note
+
+note top of paymentService
+  <b>PCI DSS Compliance:</b>
+  • Изолированная сеть
+  • Шифрование данных
+  • Аудит транзакций
+  • Регулярные проверки
+end note
+
+@enduml

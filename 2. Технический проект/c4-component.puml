@@ -1,31 +1,72 @@
-@startuml
+@startuml HotelBookingSystem Компоненты
 
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
-title "Система Бронирования Отелей. Сервис уведомлений"
+title "Hotel Booking System. Сервис бронирования. Диаграмма компонентов"
 
-Container(notificationService, "Сервис уведомлений", "ASP.NET Core", "Отправка email/SMS уведомлений") {
+Container(bookingService, "Сервис бронирования", "ASP.NET Core", "Создание, изменение, отмена бронирований, управление проживанием") {
     
-    Component(notificationController, "Api контроллер", "C#", "Принимает запросы на отправку уведомлений")
+    Component(bookingController, "Booking контроллер", "C#", "API для операций с бронированиями")
     
-    Component(notificationProcessor, "Процессор уведомлений", "C#", "Обрабатывает и маршрутизирует уведомления")
-        notificationController --> notificationProcessor : "ProcessNotification(request)"
+    Component(stayManagementController, "Stay Management контроллер", "C#", "API для управления заездами/выездами")
     
-    Component(emailServiceClient, "Email клиент", "C#", "Отправляет email через внешний сервис")
-        notificationProcessor --> emailServiceClient : "SendEmailNotification(data)"
+    Component(availabilityValidator, "Валидатор доступности", "C#", "Проверяет доступность номеров на указанные даты")
     
-    Component(smsServiceClient, "SMS клиент", "C#", "Отправляет SMS через внешний сервис")
-        notificationProcessor --> smsServiceClient : "SendSmsNotification(data)"
+    Component(pricingCalculator, "Калькулятор стоимости", "C#", "Рассчитывает стоимость бронирования с учетом тарифов и акций")
     
-    Component(templateService, "Сервис шаблонов", "C#", "Генерирует контент для уведомлений")
-        emailServiceClient --> templateService : "GetEmailTemplate(templateId, data)"
-        smsServiceClient --> templateService : "GetSmsTemplate(templateId, data)"
+    Component(reservationOrchestrator, "Менеджер бронирования", "C#", "Управляет процессом создания бронирования")
+    
+    Component(cancellationManager, "Менеджер отмены", "C#", "Обрабатывает отмену бронирований с учетом политик")
+    
+    Component(bookingRepository, "Репозиторий бронирований", "C#", "Управление данными бронирований в БД")
+    
+    Component(roomRepository, "Репозиторий номеров", "C#", "Получение информации о номерах и тарифах")
+    
+    Component(paymentServiceClient, "Клиент Payment Service", "C#", "Инициирование платежей и возвратов")
+    
+    Component(notificationServiceClient, "Клиент Notification Service", "C#", "Отправка уведомлений о бронированиях")
+    
+    Component(migrationServiceClient, "Клиент Migration Service", "C#", "Передача данных гостей для госучета")
+    
+    Component(authServiceClient, "Клиент Auth Service", "C#", "Проверка прав доступа пользователей")
+    
+    bookingController --> availabilityValidator
+    bookingController --> pricingCalculator
+    bookingController --> reservationOrchestrator
+    bookingController --> cancellationManager
+    
+    stayManagementController --> bookingRepository
+    
+    reservationOrchestrator --> bookingRepository
+    reservationOrchestrator --> paymentServiceClient
+    reservationOrchestrator --> notificationServiceClient
+    
+    cancellationManager --> bookingRepository
+    cancellationManager --> paymentServiceClient
+    cancellationManager --> notificationServiceClient
+    
+    availabilityValidator --> roomRepository
+    pricingCalculator --> roomRepository
+    
+    bookingController --> authServiceClient
+    stayManagementController --> authServiceClient
+    stayManagementController --> migrationServiceClient
 }
 
-Container_Ext(emailService, "Email сервис", "SendGrid", "Внешний сервис email")
-    emailServiceClient --> emailService : "REST API : HTTPS"
+Container_Ext(paymentService, "Сервис оплаты", "ASP.NET Core", "Обработка онлайн-платежей, возвратов")
+Container_Ext(notificationService, "Сервис уведомлений", "ASP.NET Core", "Отправка email/SMS уведомлений")
+Container_Ext(migrationService, "Сервис миграционного учета", "ASP.NET Core", "Передача данных гостей для госучета")
+Container_Ext(authService, "Сервис аутентификации", "ASP.NET Core", "Проверка прав доступа пользователей")
 
-Container_Ext(smsService, "SMS сервис", "Twilio", "Внешний сервис SMS")
-    smsServiceClient --> smsService : "REST API : HTTPS"
+ContainerDb(bookingDb, "База данных бронирований", "MSSQL", "Хранение бронирований, тарифов, статусов")
+ContainerDb(userDb, "База данных пользователей", "MSSQL", "Хранение данных отелей и номеров")
+
+paymentServiceClient --> paymentService
+notificationServiceClient --> notificationService
+migrationServiceClient --> migrationService
+authServiceClient --> authService
+
+bookingRepository --> bookingDb
+roomRepository --> userDb
 
 @enduml

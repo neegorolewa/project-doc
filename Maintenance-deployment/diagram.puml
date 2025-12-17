@@ -1,0 +1,197 @@
+@startuml
+title Процессы обслуживания системы бронирования отелей
+
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+
+' === КЛЮЧЕВЫЕ ПРОЦЕССЫ ===
+
+card "Разработка и CI/CD" as dev_cicd {
+  card "Код ревью\nи коммит" as code_review
+  card "Автотесты\n(xUnit/Jest/Playwright)" as autotests
+  card "Сборка Docker\nобразов" as docker_build
+  card "Security scan\n(уязвимости)" as security_scan
+}
+
+card "Развертывание" as deployment {
+  card "Staging\n(авторазвертывание)" as staging
+  card "Production\n(ручное подтверждение)" as production
+  card "Health checks\nи smoke tests" as health_checks
+  card "Rollback plan\n(автоматический)" as rollback
+}
+
+card "Мониторинг и аналитика" as monitoring {
+  card "Ежедневный аудит\n(9:00 МСК)" as daily_audit
+  card "Анализ логов\nи метрик" as log_analysis
+  card "Real-time алерты\n(SMS/Telegram)" as realtime_alerts
+  card "SLA отчеты\n(еженедельно)" as sla_reports
+}
+
+card "Регулярное обслуживание" as regular_maintenance {
+  card "Бэкапы БД\n(ежедневно 2:00)" as db_backup
+  card "Обновление инфраструктуры\n(по плану)" as infra_updates
+  card "Очистка кэшей\n(Redis/Memory)" as cache_cleanup
+  card "Миграции БД\n(по релизам)" as db_migrations
+}
+
+card "Управление инцидентами" as incident_management {
+  card "Обнаружение\n(мониторинг)" as incident_detection
+  card "Приоритизация\n(S1-S4)" as incident_prioritization
+  card "Диагностика\nи изоляция" as incident_diagnosis
+  card "Восстановление\nи постмортем" as incident_recovery
+}
+
+card "Безопасность и комплаенс" as security_compliance {
+  card "Аудит платежей\nPCI DSS" as pci_audit
+  card "Проверка ФЗ-152\n(персональные данные)" as personal_data_audit
+  card "Сканирование уязвимостей\n(OWASP)" as vulnerability_scan
+  card "Резервное копирование\nсекретов" as secrets_backup
+}
+
+' === ОСНОВНЫЕ СВЯЗИ ===
+
+' CI/CD пайплайн
+code_review --> autotests
+autotests --> docker_build
+docker_build --> security_scan
+security_scan --> staging
+staging --> production
+production --> health_checks
+health_checks --> rollback : "При неудачных проверках"
+
+' Мониторинг и алерты
+daily_audit --> log_analysis
+log_analysis --> realtime_alerts : "При отклонениях"
+realtime_alerts --> incident_detection
+sla_reports --> daily_audit : "Анализ трендов"
+
+' Регулярное обслуживание
+db_backup --> monitoring : "Проверка успешности"
+infra_updates --> staging : "Сначала в staging"
+cache_cleanup --> health_checks : "Проверка после очистки"
+db_migrations --> production : "После approval"
+
+' Управление инцидентами
+incident_detection --> incident_prioritization
+incident_prioritization --> incident_diagnosis
+incident_diagnosis --> incident_recovery
+incident_recovery --> health_checks : "Проверка восстановления"
+
+' Безопасность
+pci_audit --> security_scan : "Обновление правил"
+personal_data_audit --> db_backup : "Проверка шифрования"
+vulnerability_scan --> infra_updates : "Критические патчи"
+secrets_backup --> db_backup : "Синхронизация расписания"
+
+' === РОЛИ И ОТВЕТСТВЕННОСТИ ===
+
+actor "Разработчик\n(.NET/React)" as developer
+actor "DevOps инженер\n(Azure/K8s)" as devops_engineer
+actor "SRE инженер\n(Мониторинг)" as sre_engineer
+actor "Security officer\n(Безопасность)" as security_officer
+actor "Менеджер продукта\n(Бизнес)" as product_manager
+
+' Разработка
+developer --> code_review
+developer --> autotests
+
+' DevOps
+devops_engineer --> docker_build
+devops_engineer --> staging
+devops_engineer --> production
+devops_engineer --> infra_updates
+
+' SRE
+sre_engineer --> daily_audit
+sre_engineer --> realtime_alerts
+sre_engineer --> incident_management
+sre_engineer --> db_backup
+
+' Security
+security_officer --> pci_audit
+security_officer --> personal_data_audit
+security_officer --> vulnerability_scan
+security_officer --> secrets_backup
+
+' Бизнес
+product_manager --> sla_reports
+product_manager --> production : "Approve релизов"
+
+' === РАСПИСАНИЕ И ТРИГГЕРЫ ===
+
+note on link
+  <b>Автоматически:</b>
+  • CI/CD при коммите
+  • Бэкапы ежедневно 2:00
+  • Health checks каждые 5 мин
+end note
+
+note on link
+  <b>По расписанию:</b>
+  • Аудит: пн-пт 9:00
+  • Обновления: чт 3:00-5:00
+  • SLA отчеты: пн 10:00
+end note
+
+note on link
+  <b>По требованию:</b>
+  • Hotfix релизы
+  • Инциденты
+  • Аудит безопасности
+end note
+
+' === КЛЮЧЕВЫЕ ПОКАЗАТЕЛИ (SLO/SLI) ===
+
+note bottom of monitoring
+  **Service Level Objectives (SLO):**
+  • Доступность: 99.5% (AVA01)
+  • Время ответа поиска: <3с (PER02)
+  • Время восстановления: <4ч (DUR03)
+  • Успешность платежей: >99%
+end note
+
+note right of incident_management
+  **Уровни инцидентов:**
+  • S1: Критичный (платежи/бронирования недоступны)
+  • S2: Высокий (часть функционала не работает)
+  • S3: Средний (деградация производительности)
+  • S4: Низкий (косметические проблемы)
+end note
+
+note left of security_compliance
+  **Требования безопасности:**
+  • PCI DSS для платежей (SEC02)
+  • ФЗ-152 для персональных данных (SEC01)
+  • OWASP Top 10 защита (SEC03)
+  • Аудит всех действий (SEC05)
+end note
+
+' === ЭСКАЛАЦИЯ И КОММУНИКАЦИЯ ===
+
+card "Эскалация" as escalation {
+  card "Level 1\n(DevOps/SRE)" as l1
+  card "Level 2\n(Разработчики)" as l2
+  card "Level 3\n(Архитектор)" as l3
+  card "Level 4\n(Менеджмент)" as l4
+}
+
+realtime_alerts --> l1 : "Автоматически"
+l1 --> l2 : "Через 15 мин без решения"
+l2 --> l3 : "Через 30 мин"
+l3 --> l4 : "При S1 инцидентах"
+
+' === ДОКУМЕНТАЦИЯ И ОТЧЕТНОСТЬ ===
+
+card "Документация" as documentation {
+  card "Runbooks\n(процедуры)" as runbooks
+  card "Postmortems\n(анализ инцидентов)" as postmortems
+  card "Knowledge base\n(база знаний)" as knowledge_base
+  card "Compliance reports\n(отчеты)" as compliance_reports
+}
+
+incident_recovery --> postmortems : "Для S1/S2 инцидентов"
+sla_reports --> compliance_reports : "Ежеквартально"
+pci_audit --> compliance_reports : "Ежегодно"
+runbooks --> l1 : "Инструкции для быстрого реагирования"
+
+@enduml
